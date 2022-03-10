@@ -29,36 +29,29 @@ class InceptionBlock(nn.Module):
         # 1x1 conv branch
         self.b1 = nn.Sequential(
             init(('inception_' + str(key) + '/1x1'), nn.Conv2d(in_channels, n1x1, kernel_size=1), weights),
-            # nn.Conv2d(in_channels, n1x1, kernel_size=1),
             nn.ReLU(True),
         )
 
         # 1x1 -> 3x3 conv branch
         self.b2 = nn.Sequential(
             init(('inception_' + str(key) + '/3x3_reduce'), nn.Conv2d(in_channels, n3x3red, kernel_size=1), weights),
-            # nn.Conv2d(in_channels, n3x3red, kernel_size=1),
             nn.ReLU(True),
             init(('inception_' + str(key) + '/3x3'), nn.Conv2d(n3x3red, n3x3, kernel_size=3, padding=1), weights),
-            # nn.Conv2d(n3x3red, n3x3, kernel_size=3, padding=1),
             nn.ReLU(True),
         )
 
         # 1x1 -> 5x5 conv branch
         self.b3 = nn.Sequential(
             init(('inception_' + str(key) + '/5x5_reduce'), nn.Conv2d(in_channels, n5x5red, kernel_size=1), weights),
-            # nn.Conv2d(in_channels, n5x5red, kernel_size=1),
             nn.ReLU(True),
             init(('inception_' + str(key) + '/5x5'), nn.Conv2d(n5x5red, n5x5, kernel_size=5, padding=2), weights),
-            # nn.Conv2d(n5x5red, n5x5, kernel_size=5, padding=2),
             nn.ReLU(True),
         )
 
         # 3x3 pool -> 1x1 conv branch
         self.b4 = nn.Sequential(
             nn.MaxPool2d(kernel_size=3, stride=1, padding=1),
-            # nn.ReLU(True),
             init(('inception_' + str(key) + '/pool_proj'), nn.Conv2d(in_channels, pool_planes, kernel_size=1), weights),
-            # nn.Conv2d(in_channels, pool_planes, kernel_size=1),
             nn.ReLU(True),
         )
 
@@ -79,8 +72,6 @@ class LossHeader(nn.Module):
         self.type = key
         print('lossheader: ' + str(self.type))
 
-        # self.avg_pool = nn.AvgPool2d(kernel_size=7, stride=1)
-        # self.avg_pool5x5 = nn.AvgPool2d(kernel_size=5, stride=3)
         if key == 1:
             self.lossheader = nn.Sequential(
                 nn.AvgPool2d(kernel_size=5, stride=3),
@@ -92,7 +83,6 @@ class LossHeader(nn.Module):
                 nn.ReLU(True),
                 nn.Dropout(p=0.7),
             )
-            # self.conv512 = nn.Conv2d(512, 128, kernel_size=1, stride=1)
         elif key == 2:
             self.lossheader = nn.Sequential(
                 nn.AvgPool2d(kernel_size=5, stride=3),
@@ -105,7 +95,6 @@ class LossHeader(nn.Module):
                 nn.Dropout(p=0.7),
             )
 
-            # self.conv528 = nn.Conv2d(528, 128, kernel_size=1, stride=1)
         else: #key == 3
             self.lossheader = nn.Sequential(
                 nn.AvgPool2d(kernel_size=7, stride=1),
@@ -116,10 +105,6 @@ class LossHeader(nn.Module):
                 nn.Dropout(p=0.4)
             )
 
-
-        # self.dropout4 = nn.Dropout(p=0.4)
-        # self.dropout7 = nn.Dropout(p=0.7)
-        # self.relu = nn.ReLU()
         self.xyz_1024 = nn.Linear(1024, 3)
         self.wpqr_1024 = nn.Linear(1024, 4)
         self.xyz_2048 = nn.Linear(2048, 3)
@@ -158,10 +143,6 @@ class PoseNet(nn.Module):
         else:
             weights = None
 
-        # for key, value in weights.items():
-        #     print(key)
-        # print(weights.keys())
-        # print(weights)
         # TODO: Define PoseNet layers
 
         self.pre_layers = nn.Sequential(
@@ -249,28 +230,8 @@ class PoseLoss(nn.Module):
         # First 3 entries of poseGT are ground truth xyz, last 4 values are ground truth wpqr
         pose_xyz = poseGT[:, 0:3]
         pose_wpqr = poseGT[:, 3:]
-        # print("pose_xyz " + str(pose_xyz))
-        # print("pose_wpqr " + str(pose_wpqr))
-        # print("p1_xyz " + str(p1_xyz))
-        # print("p1_wpqr " + str(p1_wpqr))
-        # print("p2_xyz " + str(p2_xyz))
-        # print("p2_wpqr " + str(p2_wpqr))
-        # print("p3_xyz " + str(p3_xyz))
-        # print("p3_wpqr " + str(p3_wpqr))
-
-        # pose_xyz = pose_xyz / torch.norm(pose_xyz, 1)
-        # pose_wpqr = pose_wpqr / torch.norm(pose_wpqr, 1)
-
-        # p1_wpqr = F.normalize(p1_wpqr, p=2, dim=1)
-        # p2_wpqr = F.normalize(p2_wpqr, p=2, dim=1)
-        # p3_wpqr = F.normalize(p3_wpqr, p=2, dim=1)
         pose_wpqr = F.normalize(pose_wpqr, p=2, dim=1)
 
-        # print("p1_wpqr after norm " + str(p1_wpqr))
-        # print("p2_wpqr after norm " + str(p2_wpqr))
-        # print("p3_wpqr after norm " + str(p3_wpqr))
-        # print("pose_wpqr after norm " + str(pose_wpqr))
-        # pose_q = F.normalize(pose_q, p=2, dim=1)
         mse = torch.nn.MSELoss()
         l1_xyz = mse(p1_xyz, pose_xyz)
         l1_wpqr = mse(p1_wpqr, pose_wpqr) * self.w1_wpqr
@@ -279,28 +240,6 @@ class PoseLoss(nn.Module):
         l3_xyz = mse(p3_xyz, pose_xyz)
         l3_wpqr = mse(p3_wpqr, pose_wpqr) * self.w3_wpqr
 
-        print("l1_xyz " + str(l1_xyz))
-        print("l1_wpqr " + str(l1_wpqr))
-        print("l2_xyz " + str(l2_xyz))
-        print("l2_wpqr " + str(l2_wpqr))
-        print("l3_xyz " + str(l3_xyz))
-        print("l3_wpqr " + str(l3_wpqr))
-
-        # l1_xyz = torch.norm((p1_xyz-pose_xyz), 2)
-        # l1_wpqr = torch.norm((p1_wpqr - pose_wpqr),2) * self.w1_wpqr
-        # l2_xyz = torch.norm((p2_xyz-pose_xyz), 2)
-        # l2_wpqr = torch.norm((p2_wpqr - pose_wpqr), 2) * self.w2_wpqr
-        # l3_xyz = torch.norm((p3_xyz - pose_xyz), 2)
-        # l3_wpqr = torch.norm((p3_wpqr - pose_wpqr), 2) * self.w3_wpqr
-
-        # l1_x = torch.sqrt(torch.sum(Variable(torch.Tensor(np.square(F.pairwise_distance(pose_x, p1_xyz).detach().cpu().numpy())), requires_grad=True)))
-        # l1_q = torch.sqrt(torch.sum(Variable(torch.Tensor(np.square(F.pairwise_distance(pose_q, p1_wpqr).detach().cpu().numpy())), requires_grad=True))) * self.w1_wpqr
-        # l2_x = torch.sqrt(torch.sum(Variable(torch.Tensor(np.square(F.pairwise_distance(pose_x, p2_xyz).detach().cpu().numpy())), requires_grad=True)))
-        # l2_q = torch.sqrt(torch.sum(Variable(torch.Tensor(np.square(F.pairwise_distance(pose_q, p2_wpqr).detach().cpu().numpy())), requires_grad=True))) * self.w2_wpqr
-        # l3_x = torch.sqrt(torch.sum(Variable(torch.Tensor(np.square(F.pairwise_distance(pose_x, p3_xyz).detach().cpu().numpy())), requires_grad=True)))
-        # l3_q = torch.sqrt(torch.sum(Variable(torch.Tensor(np.square(F.pairwise_distance(pose_q, p3_wpqr).detach().cpu().numpy())), requires_grad=True))) * self.w3_wpqr
-
-        # loss = l1_x + l1_q + l2_x + l2_q + l3_x + l3_q
         loss = self.w1_xyz * (l1_xyz + l1_wpqr) + self.w2_xyz * (l2_xyz + l2_wpqr) + self.w3_xyz * (l3_xyz + l3_wpqr)
 
         return loss

@@ -30,7 +30,6 @@ class DataSource(data.Dataset):
                  normalize]
             )
         else: #test
-            # self.resize = 224
             self.transforms = T.Compose(
                 # [T.Resize(self.resize),
                 [T.CenterCrop(self.crop_size),
@@ -66,9 +65,6 @@ class DataSource(data.Dataset):
                 p4 = float(p4)
                 p5 = float(p5)
                 p6 = float(p6)
-                # p0 = p0 / 100
-                # p1 = p1 / 100
-                # p2 = p2 / 100
                 self.image_poses.append((p0, p1, p2, p3, p4, p5, p6))
                 self.images_path.append(self.root + fname)
 
@@ -85,15 +81,10 @@ class DataSource(data.Dataset):
             print(img_path)
             img = Image.open(img_path)
             img = img.resize(self.resize)
-            # tmp = np.array(img).astype(float)
             mean_image += np.array(img).astype(float)
-            # img.resize(455,256)
-
-            # sum = sum + img
 
         mean_image /= len(self.images_path)
         # Store mean image
-        # mean_image = sum
         print("Mean image computed! " + str(mean_image.size))
         np.save(self.mean_image_path, mean_image)
         return mean_image
@@ -106,13 +97,9 @@ class DataSource(data.Dataset):
         img_pose = self.image_poses[index]
 
         data = Image.open(img_path)
-        # print('image size: ' + str(data.size))
         # TODO: Perform preprocessing
         data = data.resize(self.resize)
-        # img1 = np.array(data).astype(float)
-        # print(self.mean_image.size)
         img1 = np.array(data).astype(float) - self.mean_image
-        # data = Image.fromarray(img1)
         data = Image.fromarray((img1).astype(np.uint8))
 
         data = self.transforms(data)

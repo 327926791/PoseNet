@@ -7,12 +7,11 @@ from models.PoseNet import PoseNet, PoseLoss
 from data.DataSource import *
 from optparse import OptionParser
 import os
-
+import matplotlib.pyplot as plt
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 def main(epochs, batch_size, learning_rate, save_freq, data_dir):
-    # learning_rate = 0.0001
     save_path = 'checkpoints/checkpoint.pt'
     # train dataset and train loader
     datasource = DataSource(data_dir, train=True)
@@ -31,6 +30,8 @@ def main(epochs, batch_size, learning_rate, save_freq, data_dir):
                      betas=(0.9, 0.999))
 
     batches_per_epoch = len(train_loader.batch_sampler)
+    train_loss = []
+    loss_per_epoch = 0
     for epoch in range(epochs):
         print("Starting epoch {}:".format(epoch))
         posenet.train()
@@ -52,13 +53,12 @@ def main(epochs, batch_size, learning_rate, save_freq, data_dir):
             # print(b_images.shape)
             p1_x, p1_q, p2_x, p2_q, p3_x, p3_q = posenet(b_images)
 
-            p_xyz_np = p3_x.detach().cpu().numpy()
-            p_wpqr_np = p3_q.detach().cpu().numpy()
-
-            for i in range(b_poses.shape[0]):
-                print("{}".format(step * batch_size + i))
-                print("GT\t| xyz: {}\twpqr: {}".format(poses[i, :3], poses[i, 3:]))
-                print("PRED\t| xyz: {}\twpqr: {}".format(p_xyz_np[i], p_wpqr_np[i]))
+            # p_xyz_np = p3_x.detach().cpu().numpy()
+            # p_wpqr_np = p3_q.detach().cpu().numpy()
+            # for i in range(b_poses.shape[0]):
+            #     print("{}".format(step * batch_size + i))
+            #     print("GT\t| xyz: {}\twpqr: {}".format(poses[i, :3], poses[i, 3:]))
+            #     print("PRED\t| xyz: {}\twpqr: {}".format(p_xyz_np[i], p_wpqr_np[i]))
 
 
             loss = criterion(p1_x, p1_q, p2_x, p2_q, p3_x, p3_q, b_poses)
@@ -67,7 +67,10 @@ def main(epochs, batch_size, learning_rate, save_freq, data_dir):
             optimizer.step()
 
             print("{}/{}: loss = {}".format(step+1, batches_per_epoch, loss / batch_size))
-
+            loss_per_epoch += loss.item() / batch_size
+        loss_per_epoch /= batches_per_epoch
+        print("append loss: " + str(loss_per_epoch))
+        train_loss.append(loss_per_epoch)
         # Save state
         if epoch % save_freq == 0:
             print("checkpoint save")
@@ -75,6 +78,9 @@ def main(epochs, batch_size, learning_rate, save_freq, data_dir):
             save_path = os.path.join('checkpoints', save_filename)
             torch.save(posenet.state_dict(), save_path)
 
+    plt.plot(range(1, epochs + 1), train_loss, 'bo', label="training")
+    plt.legend()
+    plt.show()
 
 def get_args():
     parser = OptionParser()
